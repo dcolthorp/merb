@@ -28,6 +28,8 @@ module Merb::Test::MultipartRequestHelper
     # key<~to_s>:: The parameter key.
     # filename<~to_s>:: Name of the file for this parameter.
     # content<~to_s>:: Content of the file for this parameter.
+    #
+    # @api private
     def initialize(key, filename, content)
       @key      = key
       @filename = filename
@@ -37,6 +39,8 @@ module Merb::Test::MultipartRequestHelper
     # ==== Returns
     # String::
     #   The file parameter in a form suitable for a multipart request.
+    #
+    # @api private
     def to_multipart
       return %(Content-Disposition: form-data; name="#{key}"; filename="#{filename}"\r\n) + "Content-Type: #{MIME::Types.type_for(@filename)}\r\n\r\n" + content + "\r\n"
     end
@@ -48,6 +52,8 @@ module Merb::Test::MultipartRequestHelper
 
     # ==== Parameters
     # params<Hash>:: Optional params for the controller.
+    #
+    # @api private
     def initialize(params = {})
       @multipart_params = []
       push_params(params)
@@ -59,6 +65,8 @@ module Merb::Test::MultipartRequestHelper
     # ==== Parameters
     # params<Hash>:: The params to add to the multipart params.
     # prefix<~to_s>:: An optional prefix for the request string keys.
+    #
+    # @api private
     def push_params(params, prefix = nil)
       params.sort_by {|k| k.to_s}.each do |key, value|
         param_key = prefix.nil? ? key : "#{prefix}[#{key}]"
@@ -78,6 +86,8 @@ module Merb::Test::MultipartRequestHelper
 
     # ==== Returns
     # Array[String, String]:: The query and the content type.
+    #
+    # @api private
     def to_multipart
       query = @multipart_params.collect { |param| "--" + BOUNDARY + "\r\n" + param.to_multipart }.join("") + "--" + BOUNDARY + "--"
       return query, CONTENT_TYPE
@@ -106,8 +116,8 @@ module Merb::Test::MultipartRequestHelper
   # Set your option to contain a file object to simulate file uploads.
   #   
   # Does not use routes.
-  #---
-  # @public
+  #
+  # @deprecated
   def dispatch_multipart_to(controller_klass, action, params = {}, env = {}, &blk)
     request = multipart_fake_request(env, params)
     dispatch_request(request, controller_klass, action, &blk)
@@ -127,6 +137,8 @@ module Merb::Test::MultipartRequestHelper
   #
   # ==== Notes
   # To include an uploaded file, put a file object as a value in params.
+  #
+  # @deprecated
   def multipart_post(path, params = {}, env = {}, &block)
     env[:request_method] = "POST"
     env[:test_with_multipart] = true
@@ -147,6 +159,8 @@ module Merb::Test::MultipartRequestHelper
   #
   # ==== Notes
   # To include an uplaoded file, put a file object as a value in params.
+  #
+  # @deprecated
   def multipart_put(path, params = {}, env = {}, &block)
     env[:request_method] = "PUT"
     env[:test_with_multipart] = true
@@ -163,6 +177,8 @@ module Merb::Test::MultipartRequestHelper
   # ==== Returns
   # FakeRequest::
   #   A multipart Request object that is built based on the parameters.
+  #
+  # @deprecated
   def multipart_fake_request(env = {}, params = {})
     if params.empty?
       fake_request(env)
@@ -172,5 +188,23 @@ module Merb::Test::MultipartRequestHelper
       fake_request(env.merge( :content_type => head, 
                               :content_length => body.length), :post_body => body)
     end
+  end
+  
+  # Perform a full stack multipart request to the specified URL. Any params which respond
+  # to #read will be treated as files, with their #path used as their filename.
+  #
+  # ==== Parameters
+  # uri<String>:: The uri to request.
+  # env<Hash>:: The rack environment for the request. Useful options include :method and :params.
+  #
+  # ==== Returns
+  # Object:: A response object as returned by Merb::Test::RequestHelper#request
+  #
+  # ==== Examples
+  #   multipart_request(url(:controller, :action), :method => "PUT", :params => {:uploaded_file => File.open("test_file.txt")})
+  def multipart_request(uri, env={})
+    m = Post.new(env.delete(:params) || {})
+    body, head = m.to_multipart
+    request(uri, env.merge(:method => "POST", "CONTENT_TYPE" => head, "CONTENT_LENGTH" => body.size, :input => body))
   end
 end

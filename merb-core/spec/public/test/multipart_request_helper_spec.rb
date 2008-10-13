@@ -156,4 +156,29 @@ module Merb::Test::MultipartRequestHelper
       query.should == "------------0xKhTmLbOuNdArY\r\nContent-Disposition: form-data; name=\"file\"; filename=\"file.txt\"\r\nContent-Type: text/plain\r\n\r\nfile contents\r\n------------0xKhTmLbOuNdArY\r\nContent-Disposition: form-data; name=\"normal\"\r\n\r\nnormal_param\r\n------------0xKhTmLbOuNdArY--"
     end
   end
+  
+  describe "request_multipart" do
+    before do
+      Merb::Router.prepare do
+        match("/:action").to(:controller => "merb/test/request_controller").name(:request)
+      end
+      
+      @filename = Pathname(File.dirname(__FILE__)) / "multipart_upload_text_file.txt"
+    end
+    
+    it "should set the content type in the request" do
+      result = multipart_request(url(:request, :multipart), :params => {:file_upload => File.open(@filename)})
+      result.body.should include(File.read(@filename))
+    end
+    
+    it "should set the content type in the param" do
+      result = multipart_request(url(:request, :multipart), :params => {:file_upload => File.open(@filename)})
+      result.headers["Content-Type"].should  include("text/plain")
+    end
+    
+    it "should default to post" do
+      result = multipart_request(url(:request, :multipart), :params => {:file_upload => File.open(@filename)})
+      result.body.should include("method: :post")
+    end
+  end
 end
