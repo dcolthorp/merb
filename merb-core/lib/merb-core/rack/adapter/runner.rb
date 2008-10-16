@@ -16,7 +16,7 @@ module Merb
         Merb::Server.change_privilege
         if opts[:runner_code]
           if File.exists?(opts[:runner_code])
-            eval(File.read(opts[:runner_code]), TOPLEVEL_BINDING, __FILE__, __LINE__)
+            eval(File.read(opts[:runner_code]), TOPLEVEL_BINDING, opts[:runner_code], 1)
           else
             eval(opts[:runner_code], TOPLEVEL_BINDING, __FILE__, __LINE__)
           end
